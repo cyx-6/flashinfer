@@ -19,7 +19,11 @@ import torch
 from einops import einsum, rearrange
 
 import flashinfer
-from flashinfer.gemm import gemm_fp8_nt_blockscaled, gemm_fp8_nt_groupwise
+from flashinfer.gemm import (
+    gemm_fp8_nt_blockscaled,
+    gemm_fp8_nt_groupwise,
+    group_gemm_fp8_nt_groupwise,
+)
 
 
 def gemm_fp8_nt_blockscaled_ref(A, B, As, Bs, block_size, output_dtype=torch.float16):
@@ -151,6 +155,71 @@ def test_fp8_groupwise_gemm(
     torch.testing.assert_close(c, ref_c, atol=1e-2, rtol=1e-2)
 
 
+@pytest.mark.parametrize("m", [128, 256, 512, 4096, 8192])
+@pytest.mark.parametrize("n", [128, 256, 512, 4096, 8192])
+@pytest.mark.parametrize("k", [128, 256, 512, 4096, 8192])
+@pytest.mark.parametrize("group_size", [1, 2, 4, 8])
+@pytest.mark.parametrize("out_dtype", [torch.bfloat16])
+def test_fp8_groupwise_group_gemm(
+    m,
+    n,
+    k,
+    group_size,
+    out_dtype,
+):
+    torch.random.manual_seed(0)
+    tile_size = 128
+    factor_for_scale = 0.01
+    fp8_info = torch.finfo(torch.float8_e4m3fn)
+    fp8_max, fp8_min = fp8_info.max, fp8_info.min
+
+    a_fp32 = (
+        (torch.randn((group_size, m, k), device="cuda", dtype=torch.float))
+        * 2
+        * fp8_max
+    )
+    a_fp8 = a_fp32.clamp(min=fp8_min, max=fp8_max).to(torch.float8_e4m3fn)
+
+    b_fp32 = (
+        (torch.randn((group_size, n, k), device="cuda", dtype=torch.float))
+        * 2
+        * fp8_max
+    )
+    b_fp8 = b_fp32.clamp(min=fp8_min, max=fp8_max).to(torch.float8_e4m3fn)
+
+    a_scale = (
+        torch.rand((group_size, k // tile_size, m), dtype=torch.float32, device="cuda")
+        * factor_for_scale
+    )
+    b_scale = (
+        torch.rand(
+            (group_size, k // tile_size, n // tile_size),
+            dtype=torch.float32,
+            device="cuda",
+        )
+        * factor_for_scale
+    )
+    a_fp8 = [a.reshape(a.shape[1:]) for a in a_fp8.split(1, dim=0)]
+    b_fp8 = [b.reshape(b.shape[1:]) for b in b_fp8.split(1, dim=0)]
+    a_scale = [a.reshape(a.shape[1:]) for a in a_scale.split(1, dim=0)]
+    b_scale = [b.reshape(b.shape[1:]) for b in b_scale.split(1, dim=0)]
+
+    out = group_gemm_fp8_nt_groupwise(
+        a_fp8, b_fp8, a_scale, b_scale, out_dtype=out_dtype
+    )
+    for a, b, a_s, b_s, c in zip(a_fp8, b_fp8, a_scale, b_scale, out):
+        ref_c = gemm_fp8_nt_groupwise_ref(
+            a,
+            b,
+            a_s,
+            b_s,
+            tile_size,
+            out_dtype,
+        )
+        torch.testing.assert_close(c, ref_c, atol=1e-2, rtol=1e-2)
+
+
 if __name__ == "__main__":
-    test_fp8_blockscale_gemm(8192, 8192, 8192, torch.bfloat16)
-    test_fp8_groupwise_gemm(8192, 8192, 8192, torch.bfloat16)
+    # test_fp8_blockscale_gemm(8192, 8192, 8192, torch.bfloat16)
+    # test_fp8_groupwise_gemm(8192, 8192, 8192, torch.bfloat16)
+    test_fp8_groupwise_group_gemm(8192, 8192, 8192, 4, torch.bfloat16)

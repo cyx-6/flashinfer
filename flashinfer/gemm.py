@@ -16,7 +16,7 @@ limitations under the License.
 
 import functools
 from types import SimpleNamespace
-from typing import Optional
+from typing import Optional, List
 
 import torch
 
@@ -152,7 +152,9 @@ def get_gemm_sm100_module():
             [
                 FLASHINFER_CSRC_DIR / "gemm_blockwise_sm100.cu",
                 FLASHINFER_CSRC_DIR / "gemm_groupwise_sm100.cu",
+                FLASHINFER_CSRC_DIR / "group_gemm_groupwise_sm100.cu",
                 FLASHINFER_CSRC_DIR / "gemm_sm100_pybind.cu",
+                FLASHINFER_CSRC_DIR / "group_gemm_sm100_pybind.cu",
             ],
             extra_cuda_cflags=["-gencode", "arch=compute_100a,code=sm_100a"],
         )
@@ -787,3 +789,92 @@ def gemm_fp8_nt_groupwise(
         workspace_buffer, a, b, a_scale, b_scale, out
     )
     return out[:m]
+
+
+def group_gemm_fp8_nt_groupwise(
+    a: List[torch.Tensor],
+    b: List[torch.Tensor],
+    a_scale: List[torch.Tensor],
+    b_scale: List[torch.Tensor],
+    out: Optional[List[torch.Tensor]] = None,
+    out_dtype: Optional[torch.dtype] = None,
+) -> torch.Tensor:
+    workspace_buffer = _get_cache_buf(
+        "group_gemm_fp8_nt_groupwise_workspace", 32 * 1024 * 1024, a[0].device
+    )
+    if (
+        len(a) != len(b)
+        or len(a) != len(a_scale)
+        or len(a) != len(b_scale)
+        or (out is not None and len(a) != len(out))
+    ):
+        raise ValueError(
+            f"Group size mismatch. a.group_size = {len(a)}, b.group_size = {len(b)}, "
+            f"a_scale.group_size = {len(a_scale)}, b_scale.group_size = {len(b_scale)}"
+            f"out.group_size = {len(out) if out is not None else None}"
+        )
+    group_size = len(a)
+    m = []
+    padded_m = []
+    for i in range(group_size):
+        if a[i].ndim != 2 or b[i].ndim != 2:
+            raise ValueError(
+                f"Shape mismatch. a[{i}].shape = {a[i].shape}, b[{i}].shape = {b[i].shape}"
+            )
+        m_i = a[i].shape[0]
+        if m_i % 4 != 0:
+            padded_m_i = (m_i + 3) // 4 * 4
+            a[i] = torch.cat(
+                (
+                    a[i],
+                    torch.zeros(
+                        padded_m_i - m_i,
+                        a[i].shape[1],
+                        device=a[i].device,
+                        dtype=a[i].dtype,
+                    ),
+                ),
+                dim=0,
+            )
+            a_scale[i] = torch.cat(
+                (
+                    a_scale[i],
+                    torch.zeros(
+                        a_scale[i].shape[0],
+                        padded_m_i - m_i,
+                        device=a[i].device,
+                        dtype=a_scale[i].dtype,
+                    ),
+                ),
+                dim=1,
+            )
+        else:
+            padded_m_i = m_i
+        m.append(m_i)
+        padded_m.append(padded_m_i)
+
+        if a[i].shape[1] != b[i].shape[1]:
+            raise ValueError(
+                f"Shape mismatch. a[{i}].shape[1] = {a[i].shape[1]}, b[{i}].shape[1] = {b[i].shape[1]}"
+            )
+
+    if out is None:
+        # NOTE(Zihao): when out is not provided, we create output tensor explicitly with out_dtype,
+        # if out_dtype is not provided, we use bfloat16 as default
+        out_dtype = out_dtype or torch.bfloat16
+        out = []
+        for i in range(group_size):
+            out.append(
+                torch.empty(
+                    padded_m[i],
+                    b[i].shape[0],
+                    device=a[i].device,
+                    dtype=out_dtype,
+                )
+            )
+    get_gemm_sm100_module().group_gemm_fp8_nt_groupwise.default(
+        workspace_buffer, a, b, a_scale, b_scale, out
+    )
+    for i in range(group_size):
+        out[i] = out[i][: m[i]]
+    return out
