@@ -111,6 +111,10 @@ class TestMnnvlMemory(unittest.TestCase):
 
         del tensor1
 
+    @pytest.mark.skipif(
+        not MnnvlMemory.supports_mnnvl(),
+        reason="Mnnvl memory is not supported on this platform",
+    )  # Skip tests on unsupported platform
     def test_moe_alltoall_multi_rank_single_gpu(self):
         torch.cuda.set_device(self.rank)
         max_world_size = 8
