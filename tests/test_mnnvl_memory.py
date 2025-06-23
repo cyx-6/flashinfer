@@ -53,10 +53,10 @@ class TestMnnvlMemory(unittest.TestCase):
         align_size = 2 * 1024 * 1024
         return (size + align_size - 1) // align_size * align_size
 
-    @pytest.mark.skipif(
-        not MnnvlMemory.supports_mnnvl(),
-        reason="Mnnvl memory is not supported on this platform",
-    )  # Skip tests on unsupported platform
+    # @pytest.mark.skipif(
+    #     not MnnvlMemory.supports_mnnvl(),
+    #     reason="Mnnvl memory is not supported on this platform",
+    # )  # Skip tests on unsupported platform
     def test_mnnvl_memory(self):
         # allocate un-aligned memory
         allocate0_size = 4 * 1024 * 1024 - 3 * 1024
@@ -111,10 +111,10 @@ class TestMnnvlMemory(unittest.TestCase):
 
         del tensor1
 
-    @pytest.mark.skipif(
-        not MnnvlMemory.supports_mnnvl(),
-        reason="Mnnvl memory is not supported on this platform",
-    )  # Skip tests on unsupported platform
+    # @pytest.mark.skipif(
+    #     not MnnvlMemory.supports_mnnvl(),
+    #     reason="Mnnvl memory is not supported on this platform",
+    # )  # Skip tests on unsupported platform
     def test_moe_alltoall_multi_rank_single_gpu(self):
         torch.cuda.set_device(self.rank)
         max_world_size = 8
