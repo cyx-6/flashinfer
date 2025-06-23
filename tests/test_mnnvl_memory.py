@@ -122,7 +122,7 @@ class TestMnnvlMemory(unittest.TestCase):
             self.world_size <= max_world_size
         ), f"should run with world_size at most {max_world_size}"
         torch.manual_seed(self.world_size)
-        input_entry_per_rank, vector_dim, dtype = 4, 8, torch.float16
+        input_entry_per_rank, vector_dim, dtype = 128, 256, torch.float16
 
         # Create a random input tensor
         input_tensor = torch.randn(
