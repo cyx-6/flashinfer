@@ -237,10 +237,10 @@ class TestMnnvlMemory(unittest.TestCase):
 
         alltoall_info = MoEAlltoallInfo(
             None,
-            send_cumsum_all_ranks[rank],
-            send_ids_all_ranks[rank],
-            recv_cumsum_all_ranks[rank],
-            recv_ids_all_ranks[rank],
+            send_cumsum_all_ranks[self.rank],
+            send_ids_all_ranks[self.rank],
+            recv_cumsum_all_ranks[self.rank],
+            recv_ids_all_ranks[self.rank],
             None,
             ref_output_tensors_all_ranks[self.rank].shape[0],
         )
@@ -259,15 +259,9 @@ class TestMnnvlMemory(unittest.TestCase):
 
         mpi_comm().Barrier()
 
-        # torch.testing.assert_close(
-        #     output, ref_output_tensors_all_ranks[self.rank], atol=1e-5, rtol=1e-5
-        # )
-        res = torch.allclose(
+        torch.testing.assert_close(
             output, ref_output_tensors_all_ranks[self.rank], atol=1e-5, rtol=1e-5
         )
-        print(self.rank, "output=", output)
-        print(self.rank, "ref=", ref_output_tensors_all_ranks[self.rank])
-        print(self.rank, "res=", res)
 
 
 if __name__ == "__main__":
