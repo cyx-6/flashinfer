@@ -774,7 +774,7 @@ def cutlass_fused_moe(
 
 
 def trtllm_gen_fused_moe_sm100_module() -> JitSpec:
-    hash = "5e0cff4583554d182ae3fee461ff87b481ff3464"
+    hash = "bb7206c27ffc78f880b4a705c514285cf96eedad"
     tllm_gen_commit = "573cd5a"
     tllm_gen_config_hash = "2dc78d9"
     include_path = (

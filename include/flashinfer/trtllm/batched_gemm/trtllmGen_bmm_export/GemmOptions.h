@@ -524,7 +524,8 @@ inline bool checkAndUpdateGemmOptions(GemmOptions& options, bool isBlackwell, in
   TLLM_CHECK_ERROR(
       (options.mDtypeA == options.mDtypeMmaA) ||
           ((options.mDtypeA == tg::Dtype::MxE2m1 || options.mDtypeA == tg::Dtype::E2m1) &&
-           options.mDtypeMmaA == tg::Dtype::Bfloat16),
+           options.mDtypeMmaA == tg::Dtype::Bfloat16) ||
+          (options.mDtypeA == tg::Dtype::E2m1 && options.mDtypeMmaA == tg::Dtype::E4m3),
       "Unsupported cast for A: ", tg::dtypeToString(options.mDtypeA), " -> ",
       tg::dtypeToString(options.mDtypeMmaA));
 

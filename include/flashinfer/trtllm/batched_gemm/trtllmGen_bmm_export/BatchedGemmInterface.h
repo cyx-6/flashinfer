@@ -25,6 +25,7 @@
 
 #ifdef TLLM_GEN_EXPORT_INTERFACE
 #include "flashinferMetaInfo.h"
+// #include "KernelMetaInfo.h"
 #endif  // TLLM_GEN_EXPORT_INTERFACE
 
 namespace flashinfer::trtllm_cubin_loader {
@@ -661,7 +662,7 @@ int32_t BatchedGemmInterface::run(BatchedGemmConfig const& config, void* workspa
   auto const numCtaZ = options.mNumSlicesForSplitK;
   mNumCtas = numCtaX * numCtaY * numCtaZ;
 
-  auto kernelParams = KernelParams::setKernelParams(
+  auto kernelParams = KernelParamsSetup::setKernelParams(
       options, batchM, batchedGemmData.mInputBuffers.mPtrA, batchedGemmData.mInputBuffers.mPtrB,
       batchedGemmData.mOutputBuffers.mPtrC, batchedGemmData.mInputBuffers.mPtrSfA,
       batchedGemmData.mInputBuffers.mPtrSfB, batchedGemmData.mInputBuffers.mPtrPerTokenSfA,
