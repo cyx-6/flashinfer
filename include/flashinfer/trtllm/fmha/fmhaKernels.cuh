@@ -597,7 +597,7 @@ class TllmFmhaKernelFactory {
     std::lock_guard<std::mutex> lg(s_mutex);
 
     if (!metainfo_loaded) {
-      std::string metainfo_raw = getMetaInfo(tllm_gen_fmha_cubin_path + "flashInferMetaInfo",
+      std::string metainfo_raw = getMetaInfo(tllm_gen_fmha_cubin_path + "/include/flashInferMetaInfo",
                                              tllm_gen_fmha_metainfo_hash, ".h");
       metainfo = KernelType::KernelMeta::loadFromMetaInfoRaw(metainfo_raw);
       metainfo_loaded = true;
