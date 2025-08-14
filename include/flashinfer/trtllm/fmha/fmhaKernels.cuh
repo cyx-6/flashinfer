@@ -26,7 +26,7 @@
 
 #include "../../utils.cuh"
 #include "../common.h"
-#include "flashInferMetaInfo.h "
+#include "flashInferMetaInfo.h"
 #include "cuda_runtime_api.h"
 #include "fmhaRunnerParams.h"
 #include "kernelParams.h"
@@ -51,7 +51,7 @@ using flashinfer::trtllm_cubin_loader::getCubin;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class TllmGenFmhaKernel {
  public:
-  using KernelMeta = TllmGenFmhaKernelMetaInfo;
+  using KernelMeta = tensorrt_llm::kernels::TllmGenFmhaKernelMetaInfo;
   using RunnerParams = TllmGenFmhaRunnerParams;
   using SelectKernelParams = TllmGenSelectKernelParams;
 
@@ -636,8 +636,8 @@ class TllmFmhaKernelFactory {
 inline TllmGenFmhaKernel const* getTllmFmhaKernels(Data_type dtypeQ, Data_type dtypeKv,
                                                    Data_type dtypeOut, unsigned int sm) {
 #ifndef EXCLUDE_SM_100
-  return TllmFmhaKernelFactory::Get().getKernels(sTllmGenFmhaKernelMetaInfos,
-      sizeof(sTllmGenFmhaKernelMetaInfos) / sizeof(sTllmGenFmhaKernelMetaInfos[0]),dtypeQ, dtypeKv, dtypeOut, sm);
+  return TllmFmhaKernelFactory::Get().getKernels(tensorrt_llm::kernels::sTllmGenFmhaKernelMetaInfos,
+      sizeof(tensorrt_llm::kernels::sTllmGenFmhaKernelMetaInfos) / sizeof(tensorrt_llm::kernels::sTllmGenFmhaKernelMetaInfos[0]),dtypeQ, dtypeKv, dtypeOut, sm);
 #else
   return nullptr;
 #endif  // EXCLUDE_SM_100
