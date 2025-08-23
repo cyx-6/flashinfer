@@ -62,6 +62,13 @@ def clear_cache_dir():
         shutil.rmtree(jit_env.FLASHINFER_JIT_DIR)
 
 
+def clear_cubin_dir():
+    if os.path.exists(jit_env.FLASHINFER_CUBIN_DIR):
+        import shutil
+
+        shutil.rmtree(jit_env.FLASHINFER_CUBIN_DIR)
+
+
 common_nvcc_flags = [
     "-DFLASHINFER_ENABLE_FP8_E8M0",
     "-DFLASHINFER_ENABLE_FP4_E2M1",

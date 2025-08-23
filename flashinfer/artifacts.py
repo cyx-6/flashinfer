@@ -17,6 +17,7 @@ limitations under the License.
 import os
 import re
 import time
+import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests  # type: ignore[import-untyped]
@@ -98,7 +99,7 @@ def download_artifacts() -> bool:
         ret = pool.submit(get_cubin, name, "", extension)
         futures.append(ret)
     results = []
-    for ret in as_completed(futures):
+    for ret in tqdm(as_completed(futures)):
         result = ret.result()
         results.append(result)
     all_success = all(results)

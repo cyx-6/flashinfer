@@ -18,15 +18,26 @@ limitations under the License.
 import argparse
 
 from .artifacts import download_artifacts
+from .jit import clear_cache_dir, clear_cubin_dir
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("FlashInfer CLI")
     parser.add_argument(
         "--download-cubin", action="store_true", help="Download artifacts"
     )
+    parser.add_argument(
+        "--clear-jit-cache", action="store_true", help="Clean jit cache"
+    )
+    parser.add_argument(
+        "--clear-cubin-cache", action="store_true", help="Clean cubin cache"
+    )
 
     args = parser.parse_args()
 
+    if args.clear_jit_cache:
+        clear_cache_dir()
+    if args.clear_cubin_cache:
+        clear_cubin_dir()
     if args.download_cubin:
         if download_artifacts():
             print("✅ All cubin download tasks completed successfully.")
