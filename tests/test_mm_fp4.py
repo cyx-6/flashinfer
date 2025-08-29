@@ -28,6 +28,8 @@ def test_mm_fp4(m, n, k, res_dtype, backend, use_128x4_sf_layout, auto_tuning):
         print("Skipping test for cudnn fp4 with auto_tuning=True")
         return
 
+    torch.manual_seed(0)
+
     input = torch.randn([m, k], device="cuda", dtype=torch.bfloat16)
     mat2 = torch.randn([n, k], device="cuda", dtype=torch.bfloat16)
     a_sf_layout = SfLayout.layout_128x4 if use_128x4_sf_layout else SfLayout.layout_8x4
@@ -38,12 +40,16 @@ def test_mm_fp4(m, n, k, res_dtype, backend, use_128x4_sf_layout, auto_tuning):
     input_fp4, input_inv_s = nvfp4_quantize(
         input, global_sf_input, sfLayout=a_sf_layout, do_shuffle=False
     )
+    print(input_fp4)
+    print(input_inv_s)
 
     # for trtllm, we need to shuffle mat2 because we swap A, B.
     do_shuffle_b = backend == "trtllm"
     mat2_fp4, mat2_inv_s = nvfp4_quantize(
         mat2, global_sf_mat2, sfLayout=SfLayout.layout_128x4, do_shuffle=do_shuffle_b
     )
+    print(mat2_fp4)
+    print(mat2_inv_s)
 
     reference = torch.mm(input, mat2.T)
 
@@ -68,4 +74,5 @@ def test_mm_fp4(m, n, k, res_dtype, backend, use_128x4_sf_layout, auto_tuning):
 
 
 if __name__ == "__main__":
-    pytest.main([__file__])
+    # pytest.main([__file__])
+    test_mm_fp4(1, 512, 256, torch.bfloat16, "trtllm", False, False)

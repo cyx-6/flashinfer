@@ -53,7 +53,8 @@ class ArtifactPath:
         "5d347c6234c9f0e7f1ab6519ea933183b48216ed/batched_gemm-32110eb-5262bae/"
     )
     TRTLLM_GEN_GEMM: str = (
-        "5d347c6234c9f0e7f1ab6519ea933183b48216ed/gemm-32110eb-434a6e1/"
+        "54488646c20f2406d0175a37ecb143e30ee3284a/gemm-bedf738-434a6e1/"
+        # "e75fad01f1bbf85f3e81a9c7d316396d506fa949/gemm-c58fbfa-434a6e1/"
     )
     CUDNN_SDPA: str = "4c623163877c8fef5751c9c7a59940cd2baae02e/fmha/cudnn/"
     DEEPGEMM: str = "d25901733420c7cddc1adf799b0d4639ed1e162f/deep-gemm/"
@@ -68,7 +69,8 @@ class MetaInfoHash:
     )
     DEEPGEMM: str = "69aa277b7f3663ed929e73f9c57301792b8c594dac15a465b44a5d151b6a1d50"
     TRTLLM_GEN_GEMM: str = (
-        "a00ef9d834cb66c724ec7c72337bc955dc53070a65a6f68b34f852d144fa6ea3"
+        "2dff62a6982c238d85866daf3c94c7b39a8b7308dfe36e7bc091b7f57c0bd3b3"
+        # "9b78d6f6a14e3621eb65aa6de4b977f4e29bf978e682abea3c81ea4086ff809c"
     )
 
 
