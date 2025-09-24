@@ -96,7 +96,7 @@ def multi_process_parallel(
         )
 
 
-@pytest.mark.parametrize("world_size", [8])
+@pytest.mark.parametrize("world_size", [4])
 def test_nvshmem_allreduce(world_size):
     available_gpus = torch.cuda.device_count()
     if world_size > available_gpus:
