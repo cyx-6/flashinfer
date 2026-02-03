@@ -57,7 +57,7 @@ def main():
             out = torch.empty_like(x)
 
             # CuTe DSL
-            from flashinfer.cute_dsl.norm import rmsnorm_cute
+            from flashinfer.cute_dsl import rmsnorm_cute
 
             cute_time = bench_kernel(lambda: rmsnorm_cute(x, w, out, 1e-6, 0.0))
 
