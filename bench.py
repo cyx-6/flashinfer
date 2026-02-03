@@ -21,7 +21,6 @@ def bench_kernel(fn, warmup=10, iters=100):
             # )
             bench_e2e_time(
                 lambda: fn(),
-                enable_cupti=True,
                 dry_run_iters=10,
                 repeat_iters=100,
             )
