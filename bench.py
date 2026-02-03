@@ -90,7 +90,7 @@ def main():
             out = torch.empty_like(x)
 
             if args.impl == "cute":
-                from flashinfer.cute_dsl.norm import rmsnorm_cute
+                from flashinfer.cute_dsl import rmsnorm_cute
 
                 time_us = bench_kernel(lambda: rmsnorm_cute(x, w, out, 1e-6, 0.0))
             else:
@@ -129,7 +129,7 @@ def main():
             out = torch.empty_like(x)
 
             # CuTe DSL
-            from flashinfer.cute_dsl.norm import layernorm_cute
+            from flashinfer.cute_dsl import layernorm_cute
 
             cute_time = bench_kernel(lambda: layernorm_cute(out, x, gamma, beta, 1e-6))
 
@@ -170,7 +170,7 @@ def main():
             w = torch.randn(hidden, dtype=dtype, device="cuda")
 
             # CuTe DSL
-            from flashinfer.cute_dsl.norm import fused_add_rmsnorm_cute
+            from flashinfer.cute_dsl import fused_add_rmsnorm_cute
 
             x_cute = x.clone()
             res_cute = res.clone()
