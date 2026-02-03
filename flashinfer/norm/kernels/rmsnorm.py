@@ -109,20 +109,20 @@ class RMSNormKernel:
         stream,
     ):
         """Launch the RMSNorm kernel."""
-        tv_shape, tv_stride = make_tv_layout(
-            self.threads_per_row,
-            self.vec_size,
-            self.num_vec_blocks,
-        )
-        tv_layout = cute.make_layout(tv_shape, stride=tv_stride)
-        tiler_mn = (1, self.cols_per_tile)
+        # tv_shape, tv_stride = make_tv_layout(
+        #     self.threads_per_row,
+        #     self.vec_size,
+        #     self.num_vec_blocks,
+        # )
+        # tv_layout = cute.make_layout(tv_shape, stride=tv_stride)
+        # tiler_mn = (1, self.cols_per_tile)
 
-        self.kernel(mX, mW, mY, M, eps, tv_layout, tiler_mn).launch(
-            grid=[M, 1, 1],
-            block=[self.num_threads, 1, 1],
-            smem=self._smem_size_in_bytes(),
-            stream=stream,
-        )
+        # self.kernel(mX, mW, mY, M, eps, tv_layout, tiler_mn).launch(
+        #     grid=[M, 1, 1],
+        #     block=[self.num_threads, 1, 1],
+        #     smem=self._smem_size_in_bytes(),
+        #     stream=stream,
+        # )
 
     @cute.kernel
     def kernel(
@@ -824,7 +824,7 @@ def rmsnorm_cute(
     
     with nvtx.annotate("rmsnorm_cute_get_kernel"):
         kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
-        
+
     with nvtx.annotate("rmsnorm_cute_run"):
         kernel(input_2d, weight, out_2d, M, eps)
 
