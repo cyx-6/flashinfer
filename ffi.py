@@ -97,6 +97,9 @@ def benchmark_overhead(add_one, prefix: str, extra: int = 1):
     # compile the kernel with "--enable-tvm-ffi" option
     compiled_add_one = cute.compile(add_one, a_cute, *([b_cute] * extra), options="--enable-tvm-ffi")
     shared_libs = get_shared_libs()
+    Path.mkdir("./build", exist_ok=True)
+    Path.unlink("./build/add_one_bench.o", missing_ok=True)
+    Path.unlink("./build/add_one_bench.so", missing_ok=True)
     object_file_path = "./build/add_one_bench.o"
     lib_path = "./build/add_one_bench.so"
     # compile the object file to a shared library
