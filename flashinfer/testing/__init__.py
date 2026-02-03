@@ -21,6 +21,7 @@ from .utils import (
     attention_tb_per_sec_with_actual_seq_lens,
     attention_tflops_per_sec,
     attention_tflops_per_sec_with_actual_seq_lens,
+    bench_e2e_time,
     bench_gpu_time,
     bench_gpu_time_with_cupti,
     bench_gpu_time_with_cuda_event,
