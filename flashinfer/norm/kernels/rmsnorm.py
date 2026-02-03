@@ -811,7 +811,7 @@ def rmsnorm_cute(
     Supports arbitrary stride - no need to call contiguous().
     Last dimension must be contiguous (stride[-1] == 1).
     """
-    r = nvtx.start_range(message="rmsnorm_cute_prepare"):
+    r = nvtx.start_range(message="rmsnorm_cute_prepare")
     H = input.shape[-1]
     if input.dim() == 3:
         M = input.shape[0] * input.shape[1]
