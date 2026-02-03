@@ -28,6 +28,7 @@ import operator
 import cutlass
 import cutlass.cute as cute
 import torch
+import nvtx
 from cutlass import Float32, Int32
 
 from ..utils import (
@@ -608,6 +609,7 @@ class RMSNormQuantKernel:
 # =============================================================================
 
 
+@nvtx.annotate("cute_rmsnorm_compile")
 @functools.cache
 def _get_compiled_rmsnorm_kernel(dtype_str: str, H: int, weight_bias: float):
     """Get a compiled RMSNorm kernel using TVM-FFI."""
@@ -644,6 +646,7 @@ def _get_compiled_rmsnorm_kernel(dtype_str: str, H: int, weight_bias: float):
         options="--enable-tvm-ffi",
     )
 
+    @nvtx.annotate("cute_rmsnorm_run")
     def tensor_api(
         input: torch.Tensor,
         weight: torch.Tensor,

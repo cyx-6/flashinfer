@@ -109,7 +109,8 @@ def _rmsnorm_impl(
     if enable_pdl is None:
         enable_pdl = device_support_pdl(input.device)
     if _USE_CUDA_NORM:
-        get_norm_module().rmsnorm(out, input, weight, eps, enable_pdl)
+        with nvtx.annotate(message="cuda_rmsnorm"):
+            get_norm_module().rmsnorm(out, input, weight, eps, enable_pdl)
     else:
         if input.dim() == 3:
             qk_rmsnorm_cute(

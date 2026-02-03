@@ -31,14 +31,14 @@ def main():
 
     # Test configurations: (batch_size, hidden_size, dtype)
     configs = [
-        (1, 4096, torch.bfloat16),
-        (32, 4096, torch.bfloat16),
-        (64, 4096, torch.bfloat16),
-        (128, 4096, torch.bfloat16),
+        # (1, 4096, torch.bfloat16),
+        # (32, 4096, torch.bfloat16),
+        # (64, 4096, torch.bfloat16),
+        # (128, 4096, torch.bfloat16),
         (256, 4096, torch.bfloat16),
-        (32, 8192, torch.bfloat16),
-        (64, 8192, torch.bfloat16),
-        (32, 16384, torch.bfloat16),
+        # (32, 8192, torch.bfloat16),
+        # (64, 8192, torch.bfloat16),
+        # (32, 16384, torch.bfloat16),
     ]
 
     print("=" * 90)
