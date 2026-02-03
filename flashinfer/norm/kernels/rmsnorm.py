@@ -609,7 +609,6 @@ class RMSNormQuantKernel:
 # =============================================================================
 
 
-@nvtx.annotate("cute_rmsnorm_get_compiled_kernel")
 @functools.cache
 def _get_compiled_rmsnorm_kernel(dtype_str: str, H: int, weight_bias: float):
     """Get a compiled RMSNorm kernel using TVM-FFI."""
@@ -646,7 +645,6 @@ def _get_compiled_rmsnorm_kernel(dtype_str: str, H: int, weight_bias: float):
         options="--enable-tvm-ffi",
     )
 
-    @nvtx.annotate("cute_rmsnorm_run")
     def tensor_api(
         input: torch.Tensor,
         weight: torch.Tensor,
@@ -811,21 +809,24 @@ def rmsnorm_cute(
     Supports arbitrary stride - no need to call contiguous().
     Last dimension must be contiguous (stride[-1] == 1).
     """
-    r = nvtx.start_range(message="rmsnorm_cute_prepare")
-    H = input.shape[-1]
-    if input.dim() == 3:
-        M = input.shape[0] * input.shape[1]
-        input_2d = input.view(M, H)
-        out_2d = out.view(M, H)
-    else:
-        M = input.shape[0]
-        input_2d = input
-        out_2d = out
+    with nvtx.annotate("rmsnorm_cute_prepare"):
+        H = input.shape[-1]
+        if input.dim() == 3:
+            M = input.shape[0] * input.shape[1]
+            input_2d = input.view(M, H)
+            out_2d = out.view(M, H)
+        else:
+            M = input.shape[0]
+            input_2d = input
+            out_2d = out
 
-    dtype_str = _torch_dtype_to_str(input.dtype)
-    nvtx.end_range(r)
-    kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
-    kernel(input_2d, weight, out_2d, M, eps)
+        dtype_str = _torch_dtype_to_str(input.dtype)
+    
+    with nvtx.annotate("rmsnorm_cute_get_kernel"):
+        kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
+        
+    with nvtx.annotate("rmsnorm_cute_run"):
+        kernel(input_2d, weight, out_2d, M, eps)
 
 
 def qk_rmsnorm_cute(
