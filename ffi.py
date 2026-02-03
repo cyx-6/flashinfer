@@ -98,10 +98,10 @@ def benchmark_overhead(add_one, prefix: str, extra: int = 1):
     compiled_add_one = cute.compile(add_one, a_cute, *([b_cute] * extra), options="--enable-tvm-ffi")
     shared_libs = get_shared_libs()
     Path.mkdir(Path("./build"), exist_ok=True)
-    Path.unlink(Path("./build/add_one_bench.o"), missing_ok=True)
-    Path.unlink(Path("./build/add_one_bench.so"), missing_ok=True)
-    object_file_path = "./build/add_one_bench.o"
-    lib_path = "./build/add_one_bench.so"
+    Path.unlink(Path(f"./build/add_one_bench_{prefix}.o"), missing_ok=True)
+    Path.unlink(Path(f"./build/add_one_bench_{prefix}.so"), missing_ok=True)
+    object_file_path = f"./build/add_one_bench_{prefix}.o"
+    lib_path = f"./build/add_one_bench_{prefix}.so"
     # compile the object file to a shared library
     compiled_add_one.export_to_c(object_file_path, function_name="add_one")
     cmd = ["gcc", "-O3", "-flto", "-shared", "-o", lib_path, object_file_path, *shared_libs]
