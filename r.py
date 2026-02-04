@@ -112,7 +112,7 @@ def rmsnorm_gen(
         tv_layout = cute.make_layout(tv_shape, stride=tv_stride)
         tiler_mn = (1, cols_per_tile)
 
-        kernel(mX, mW, mY, M, eps, tv_layout, tiler_mn).launch(
+        cute_kernel(mX, mW, mY, M, eps, tv_layout, tiler_mn).launch(
             grid=[M, 1, 1],
             block=[num_threads, 1, 1],
             smem=_smem_size_in_bytes(),
