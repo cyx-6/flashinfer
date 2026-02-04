@@ -820,7 +820,6 @@ def _get_compiled_rmsnorm_quant_kernel(
 # CuTe DSL API Functions
 # =============================================================================
 
-cached = {}
 
 def rmsnorm_cute(
     input: torch.Tensor,
@@ -837,33 +836,16 @@ def rmsnorm_cute(
     """
     H = input.shape[-1]
     if input.dim() == 3:
-        assert False
         M = input.shape[0] * input.shape[1]
         input_2d = input.view(M, H)
         out_2d = out.view(M, H)
     else:
         M = input.shape[0]
-
-        dtype_str = _torch_dtype_to_str(input.dtype)
-
-        kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
-
-        # if cached.get(dtype_str + str(H)) is None:
-        #     kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
-        #     cached[dtype_str + str(H)] = kernel
-        # else:
-        #     kernel = cached[dtype_str + str(H)]
-        kernel(input, weight, out, M, eps)
-        return
+        input_2d = input
+        out_2d = out
 
     dtype_str = _torch_dtype_to_str(input.dtype)
-
-    if cached.get(dtype_str + str(H)) is None:
-        kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias, enable_pdl)
-        cached[dtype_str + str(H)] = kernel
-    else:
-        kernel = cached[dtype_str + str(H)]
-
+    kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias, enable_pdl)
     kernel(input_2d, weight, out_2d, M, eps)
 
 
