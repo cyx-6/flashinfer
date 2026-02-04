@@ -21,7 +21,7 @@
 using namespace flashinfer;
 
 void rmsnorm(TensorView output, TensorView input, TensorView weight, double eps, bool enable_pdl) {
-  nvtx3::scoped_range all{"cuda_rmsnorm_all"};
+  // nvtx3::scoped_range all{"cuda_rmsnorm_all"};
   CHECK_LAST_DIM_CONTIGUOUS_INPUT(input);
   CHECK_LAST_DIM_CONTIGUOUS_INPUT(output);
   CHECK_LAST_DIM_CONTIGUOUS_INPUT(weight);
@@ -40,7 +40,7 @@ void rmsnorm(TensorView output, TensorView input, TensorView weight, double eps,
     TVM_FFI_ICHECK_EQ(output.size(1), hidden_size);
     ffi::CUDADeviceGuard device_guard(input.device().device_id);
     const cudaStream_t stream = get_stream(input.device());
-    nvtx3::scoped_range run{"cuda_rmsnorm_run2d"};
+    // nvtx3::scoped_range run{"cuda_rmsnorm_run2d"};
     DISPATCH_DLPACK_DTYPE_TO_CTYPE_FP16(input.dtype(), c_type, [&] {
       cudaError_t status = norm::RMSNorm(
           static_cast<c_type*>(input.data_ptr()), static_cast<c_type*>(weight.data_ptr()),
@@ -64,7 +64,7 @@ void rmsnorm(TensorView output, TensorView input, TensorView weight, double eps,
 
     ffi::CUDADeviceGuard device_guard(input.device().device_id);
     const cudaStream_t stream = get_stream(input.device());
-    nvtx3::scoped_range run{"cuda_rmsnorm_run3d"};
+    // nvtx3::scoped_range run{"cuda_rmsnorm_run3d"};
     DISPATCH_DLPACK_DTYPE_TO_CTYPE_FP16(input.dtype(), c_type, [&] {
       cudaError_t status = norm::QKRMSNorm(
           static_cast<c_type*>(input.data_ptr()), static_cast<c_type*>(weight.data_ptr()),

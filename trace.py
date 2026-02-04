@@ -59,7 +59,6 @@ def main():
             # CuTe DSL
             from flashinfer.cute_dsl import rmsnorm_cute
 
-            @nvtx.annotate("CuTe DSL RMSNorm")
             def run_cute():
                 rmsnorm_cute(x, w, out, 1e-6, 0.0)
 
@@ -73,7 +72,6 @@ def main():
             def get_norm_module():
                 return gen_norm_module().build_and_load()
 
-            @nvtx.annotate("CUDA JIT RMSNorm")
             def run_cuda():
                 get_norm_module().rmsnorm(out, x, w, 1e-6, False)
 

@@ -258,8 +258,8 @@ def benchmark_e2e():
         )
 
         stream_fake = cute.runtime.make_fake_stream(use_tvm_ffi_env_stream=True)
-        compiled_rmsnorm = cute.compile(cute_func, x_fake, w_fake, out_fake, Int32(1), Float32(1e-6), stream_fake, options="--enable-tvm-ffi")
-        compiled_rmsnorm(x_torch, w_torch, out_torch, Int32(batch_size), Float32(1e-6))
+        # compiled_rmsnorm = cute.compile(cute_func, x_fake, w_fake, out_fake, Int32(1), Float32(1e-6), stream_fake, options="--enable-tvm-ffi")
+        # compiled_rmsnorm(x_torch, w_torch, out_torch, Int32(batch_size), Float32(1e-6))
 
     benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-torch-tensor", torch_rmsnorm, [], 100)
     benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-torch-tensor", torch_rmsnorm, [], 100)

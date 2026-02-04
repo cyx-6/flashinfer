@@ -28,7 +28,6 @@ import operator
 import cutlass
 import cutlass.cute as cute
 import torch
-import nvtx
 from cutlass import Float32, Int32
 
 from ..utils import (
@@ -609,7 +608,7 @@ class RMSNormQuantKernel:
 # =============================================================================
 
 
-@functools.cache
+# @functools.cache
 def _get_compiled_rmsnorm_kernel(dtype_str: str, H: int, weight_bias: float):
     """Get a compiled RMSNorm kernel using TVM-FFI."""
     dtype = get_cutlass_dtype(dtype_str)
@@ -795,7 +794,8 @@ def _get_compiled_rmsnorm_quant_kernel(
 # CuTe DSL API Functions
 # =============================================================================
 
-@nvtx.annotate("rmsnorm_cute")
+cached = {}
+
 def rmsnorm_cute(
     input: torch.Tensor,
     weight: torch.Tensor,
@@ -821,7 +821,11 @@ def rmsnorm_cute(
 
     dtype_str = _torch_dtype_to_str(input.dtype)
 
-    kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
+    if cached.get(dtype_str + str(H)) is None:
+        kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
+        cached[dtype_str + str(H)] = kernel
+    else:
+        kernel = cached[dtype_str + str(H)]
 
     kernel(input_2d, weight, out_2d, M, eps)
 
