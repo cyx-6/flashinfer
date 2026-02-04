@@ -155,9 +155,9 @@ def benchmark_overhead():
         get_cutlass_dtype(_torch_dtype_to_str(x_torch.dtype)),
         hidden_size
     )
-    compiled_rmsnorm = cute.compile(cute_func, x_cute, w_cute, out_cute, options="--enable-tvm-ffi")
-    torch_args = [x_torch, w_torch, out_torch]
-    cute_args = [x_cute, w_cute, out_cute]
+    compiled_rmsnorm = cute.compile(cute_func, x_cute, w_cute, out_cute, Int32(1), Float32(1e-6), options="--enable-tvm-ffi")
+    torch_args = [x_torch, w_torch, out_torch, Int32(batch_size), Float32(1e-6)]
+    cute_args = [x_cute, w_cute, out_cute, Int32(batch_size), Float32(1e-6)]
     benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-torch-tensor", compiled_rmsnorm, torch_args)
     benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-cute-tensor", compiled_rmsnorm, cute_args)
 
