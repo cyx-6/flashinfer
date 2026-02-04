@@ -846,7 +846,7 @@ def rmsnorm_cute(
 
     dtype_str = _torch_dtype_to_str(input.dtype)
     kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias, enable_pdl)
-    # kernel(input_2d, weight, out_2d, M, eps)
+    kernel(input_2d, weight, out_2d, M, eps)
 
 
 def qk_rmsnorm_cute(
