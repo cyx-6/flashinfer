@@ -817,8 +817,17 @@ def rmsnorm_cute(
         out_2d = out.view(M, H)
     else:
         M = input.shape[0]
-        input_2d = input
-        out_2d = out
+
+        dtype_str = _torch_dtype_to_str(input.dtype)
+
+        if cached.get(dtype_str + str(H)) is None:
+            kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
+            cached[dtype_str + str(H)] = kernel
+        else:
+            kernel = cached[dtype_str + str(H)]
+
+        kernel(input, weight, out, M, eps)
+        return
 
     dtype_str = _torch_dtype_to_str(input.dtype)
 
