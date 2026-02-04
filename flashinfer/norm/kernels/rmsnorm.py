@@ -136,88 +136,88 @@ class RMSNormKernel:
         tiler_mn: cute.Shape,
     ):
         """Device kernel for RMSNorm."""
-        # tidx, _, _ = cute.arch.thread_idx()
-        # bidx, _, _ = cute.arch.block_idx()
+        tidx, _, _ = cute.arch.thread_idx()
+        bidx, _, _ = cute.arch.block_idx()
 
-        # H = self.H
-        # weight_bias = self.weight_bias
-        # threads_per_row = tv_layout.shape[0][0]
-        # num_warps = self.num_warps
-        # copy_bits = self.copy_bits
+        H = self.H
+        weight_bias = self.weight_bias
+        threads_per_row = tv_layout.shape[0][0]
+        num_warps = self.num_warps
+        copy_bits = self.copy_bits
 
-        # # Allocate shared memory (only reduction buffer needed)
-        # smem = cutlass.utils.SmemAllocator()
-        # reduction_buffer = smem.allocate_tensor(
-        #     Float32,
-        #     cute.make_layout((num_warps,)),
-        #     byte_alignment=4,
-        # )
+        # Allocate shared memory (only reduction buffer needed)
+        smem = cutlass.utils.SmemAllocator()
+        reduction_buffer = smem.allocate_tensor(
+            Float32,
+            cute.make_layout((num_warps,)),
+            byte_alignment=4,
+        )
 
-        # # Create identity tensor for coordinate tracking
-        # idX = cute.make_identity_tensor(mX.shape)
+        # Create identity tensor for coordinate tracking
+        idX = cute.make_identity_tensor(mX.shape)
 
-        # # Slice for this row
-        # gX = cute.local_tile(mX, tiler_mn, (bidx, 0))
-        # gY = cute.local_tile(mY, tiler_mn, (bidx, 0))
-        # cX = cute.local_tile(idX, tiler_mn, (bidx, 0))
+        # Slice for this row
+        gX = cute.local_tile(mX, tiler_mn, (bidx, 0))
+        gY = cute.local_tile(mY, tiler_mn, (bidx, 0))
+        cX = cute.local_tile(idX, tiler_mn, (bidx, 0))
 
-        # # Expand weight to 2D for consistent tiling
-        # mW_2d = cute.prepend_ones(mW, up_to_rank=2)
+        # Expand weight to 2D for consistent tiling
+        mW_2d = cute.prepend_ones(mW, up_to_rank=2)
 
-        # # Create TiledCopy for load and store (both use CopyUniversalOp for sync operations)
-        # copy_atom = cute.make_copy_atom(
-        #     cute.nvgpu.CopyUniversalOp(),
-        #     mX.element_type,
-        #     num_bits_per_copy=copy_bits,
-        # )
+        # Create TiledCopy for load and store (both use CopyUniversalOp for sync operations)
+        copy_atom = cute.make_copy_atom(
+            cute.nvgpu.CopyUniversalOp(),
+            mX.element_type,
+            num_bits_per_copy=copy_bits,
+        )
 
-        # tiled_copy = cute.make_tiled_copy(copy_atom, tv_layout, tiler_mn)
-        # thr_copy = tiled_copy.get_slice(tidx)
+        tiled_copy = cute.make_tiled_copy(copy_atom, tv_layout, tiler_mn)
+        thr_copy = tiled_copy.get_slice(tidx)
 
-        # # Partition tensors
-        # tXgX = thr_copy.partition_S(gX)
-        # tXgW = thr_copy.partition_S(mW_2d)
-        # tXgY = thr_copy.partition_D(gY)
-        # tXcX = thr_copy.partition_S(cX)
+        # Partition tensors
+        tXgX = thr_copy.partition_S(gX)
+        tXgW = thr_copy.partition_S(mW_2d)
+        tXgY = thr_copy.partition_D(gY)
+        tXcX = thr_copy.partition_S(cX)
 
-        # # Register fragments - initialize to zero for proper handling of out-of-bounds threads
-        # tXrX = cute.make_rmem_tensor(tXgX.shape, mX.element_type)
-        # tXrW = cute.make_rmem_tensor(tXgW.shape, mW.element_type)
-        # tXrX.store(cute.zeros_like(tXrX, dtype=mX.element_type))
-        # tXrW.store(cute.zeros_like(tXrW, dtype=mW.element_type))
+        # Register fragments - initialize to zero for proper handling of out-of-bounds threads
+        tXrX = cute.make_rmem_tensor(tXgX.shape, mX.element_type)
+        tXrW = cute.make_rmem_tensor(tXgW.shape, mW.element_type)
+        tXrX.store(cute.zeros_like(tXrX, dtype=mX.element_type))
+        tXrW.store(cute.zeros_like(tXrW, dtype=mW.element_type))
 
-        # # Bounds checking (column boundary only, row is always valid since grid=[M,1,1])
-        # tXpX = predicate_k(tXcX, limit=H)
+        # Bounds checking (column boundary only, row is always valid since grid=[M,1,1])
+        tXpX = predicate_k(tXcX, limit=H)
 
-        # # ===================================================================
-        # # Phase 1: Load input from global to register
-        # # ===================================================================
-        # cute.copy(copy_atom, tXgX, tXrX, pred=tXpX)
+        # ===================================================================
+        # Phase 1: Load input from global to register
+        # ===================================================================
+        cute.copy(copy_atom, tXgX, tXrX, pred=tXpX)
 
-        # x = tXrX.load().to(Float32)
-        # x_sq = x * x
-        # sum_sq = row_reduce_sum(x_sq, threads_per_row, reduction_buffer)
+        x = tXrX.load().to(Float32)
+        x_sq = x * x
+        sum_sq = row_reduce_sum(x_sq, threads_per_row, reduction_buffer)
 
-        # # Compute rstd = 1 / sqrt(mean(x^2) + eps)
-        # mean_sq = sum_sq / Float32(H)
-        # rstd = cute.math.rsqrt(mean_sq + eps, fastmath=True)
+        # Compute rstd = 1 / sqrt(mean(x^2) + eps)
+        mean_sq = sum_sq / Float32(H)
+        rstd = cute.math.rsqrt(mean_sq + eps, fastmath=True)
 
-        # # ===================================================================
-        # # Phase 2: Load weight from global to register
-        # # ===================================================================
-        # cute.copy(copy_atom, tXgW, tXrW, pred=tXpX)
+        # ===================================================================
+        # Phase 2: Load weight from global to register
+        # ===================================================================
+        cute.copy(copy_atom, tXgW, tXrW, pred=tXpX)
 
-        # w = tXrW.load().to(Float32)
+        w = tXrW.load().to(Float32)
 
-        # # output = input * rstd * (weight + weight_bias)
-        # y = x * rstd * (w + Float32(weight_bias))
+        # output = input * rstd * (weight + weight_bias)
+        y = x * rstd * (w + Float32(weight_bias))
 
-        # # Store output using cute.copy with predicate
-        # tYrY = y.to(mY.element_type)
-        # tXrY = cute.make_rmem_tensor(tXgY.shape, mY.element_type)
-        # tXrY.store(tYrY)
+        # Store output using cute.copy with predicate
+        tYrY = y.to(mY.element_type)
+        tXrY = cute.make_rmem_tensor(tXgY.shape, mY.element_type)
+        tXrY.store(tYrY)
 
-        # cute.copy(copy_atom, tXrY, tXgY, pred=tXpX)
+        cute.copy(copy_atom, tXrY, tXgY, pred=tXpX)
 
 
 # =============================================================================
@@ -809,24 +809,21 @@ def rmsnorm_cute(
     Supports arbitrary stride - no need to call contiguous().
     Last dimension must be contiguous (stride[-1] == 1).
     """
-    with nvtx.annotate("rmsnorm_cute_prepare"):
-        H = input.shape[-1]
-        if input.dim() == 3:
-            M = input.shape[0] * input.shape[1]
-            input_2d = input.view(M, H)
-            out_2d = out.view(M, H)
-        else:
-            M = input.shape[0]
-            input_2d = input
-            out_2d = out
+    H = input.shape[-1]
+    if input.dim() == 3:
+        M = input.shape[0] * input.shape[1]
+        input_2d = input.view(M, H)
+        out_2d = out.view(M, H)
+    else:
+        M = input.shape[0]
+        input_2d = input
+        out_2d = out
 
-        dtype_str = _torch_dtype_to_str(input.dtype)
-    
-    with nvtx.annotate("rmsnorm_cute_get_kernel"):
-        kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
+    dtype_str = _torch_dtype_to_str(input.dtype)
 
-    with nvtx.annotate("rmsnorm_cute_run"):
-        kernel(input_2d, weight, out_2d, M, eps)
+    kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
+
+    kernel(input_2d, weight, out_2d, M, eps)
 
 
 def qk_rmsnorm_cute(

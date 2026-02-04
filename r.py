@@ -226,20 +226,30 @@ def benchmark_overhead():
     w_torch = torch.randn(hidden_size, device="cuda", dtype=dtype)
     out_torch = torch.empty_like(x_torch)
 
-    x_cute = from_dlpack(x_torch, enable_tvm_ffi=True).mark_layout_dynamic()
-    w_cute = from_dlpack(w_torch, enable_tvm_ffi=True).mark_layout_dynamic()
-    out_cute = from_dlpack(out_torch, enable_tvm_ffi=True).mark_layout_dynamic()
+    sym_m = cute.sym_int()
+    # Use symbolic stride for arbitrary row stride (last dim must be contiguous)
+    sym_row_stride_x = cute.sym_int(divisibility=kernel_obj.vec_size)
+    sym_row_stride_y = cute.sym_int(divisibility=kernel_obj.vec_size)
+
+    # Create fake tensors with symbolic stride for arbitrary stride support
+    x_fake = cute.runtime.make_fake_tensor(
+        dtype, (sym_m, H), (sym_row_stride_x, 1), assumed_align=16
+    )
+    w_fake = cute.runtime.make_fake_compact_tensor(dtype, (H,), assumed_align=16)
+    out_fake = cute.runtime.make_fake_tensor(
+        dtype, (sym_m, H), (sym_row_stride_y, 1), assumed_align=16
+    )
 
     cute_kernel, cute_func = rmsnorm_gen(
         get_cutlass_dtype(_torch_dtype_to_str(x_torch.dtype)),
         hidden_size
     )
     stream_fake = cute.runtime.make_fake_stream(use_tvm_ffi_env_stream=True)
-    compiled_rmsnorm = cute.compile(cute_func, x_cute, w_cute, out_cute, Int32(1), Float32(1e-6), stream_fake, options="--enable-tvm-ffi")
+    compiled_rmsnorm = cute.compile(cute_func, x_fake, w_fake, out_fake, Int32(1), Float32(1e-6), stream_fake, options="--enable-tvm-ffi")
+    compiled_rmsnorm(x_torch, w_torch, out_torch, Int32(batch_size), Float32(1e-6))
+    
     torch_args = [x_torch, w_torch, out_torch, Int32(batch_size), Float32(1e-6)]
-    cute_args = [x_cute, w_cute, out_cute, Int32(batch_size), Float32(1e-6)]
     benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-torch-tensor", compiled_rmsnorm, torch_args)
-    benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-cute-tensor", compiled_rmsnorm, cute_args)
 
 
 def benchmark_e2e():
@@ -253,35 +263,30 @@ def benchmark_e2e():
     out_torch = torch.empty_like(x_torch)
 
     def torch_rmsnorm():
-        x_cute = from_dlpack(x_torch, enable_tvm_ffi=True).mark_layout_dynamic()
-        w_cute = from_dlpack(w_torch, enable_tvm_ffi=True).mark_layout_dynamic()
-        out_cute = from_dlpack(out_torch, enable_tvm_ffi=True).mark_layout_dynamic()
+        sym_m = cute.sym_int()
+        # Use symbolic stride for arbitrary row stride (last dim must be contiguous)
+        sym_row_stride_x = cute.sym_int(divisibility=kernel_obj.vec_size)
+        sym_row_stride_y = cute.sym_int(divisibility=kernel_obj.vec_size)
+
+        # Create fake tensors with symbolic stride for arbitrary stride support
+        x_fake = cute.runtime.make_fake_tensor(
+            dtype, (sym_m, H), (sym_row_stride_x, 1), assumed_align=16
+        )
+        w_fake = cute.runtime.make_fake_compact_tensor(dtype, (H,), assumed_align=16)
+        out_fake = cute.runtime.make_fake_tensor(
+            dtype, (sym_m, H), (sym_row_stride_y, 1), assumed_align=16
+        )
 
         cute_kernel, cute_func = rmsnorm_gen(
             get_cutlass_dtype(_torch_dtype_to_str(x_torch.dtype)),
             hidden_size
         )
         stream_fake = cute.runtime.make_fake_stream(use_tvm_ffi_env_stream=True)
-        compiled_rmsnorm = cute.compile(cute_func, x_cute, w_cute, out_cute, Int32(1), Float32(1e-6), stream_fake, options="--enable-tvm-ffi")
+        compiled_rmsnorm = cute.compile(cute_func, x_fake, w_fake, out_fake, Int32(1), Float32(1e-6), stream_fake, options="--enable-tvm-ffi")
         compiled_rmsnorm(x_torch, w_torch, out_torch, Int32(batch_size), Float32(1e-6))
 
-    def cute_rmsnorm():
-        x_cute = from_dlpack(x_torch, enable_tvm_ffi=True).mark_layout_dynamic()
-        w_cute = from_dlpack(w_torch, enable_tvm_ffi=True).mark_layout_dynamic()
-        out_cute = from_dlpack(out_torch, enable_tvm_ffi=True).mark_layout_dynamic()
-
-        cute_kernel, cute_func = rmsnorm_gen(
-            get_cutlass_dtype(_torch_dtype_to_str(x_torch.dtype)),
-            hidden_size
-        )
-        stream_fake = cute.runtime.make_fake_stream(use_tvm_ffi_env_stream=True)
-        compiled_rmsnorm = cute.compile(cute_func, x_cute, w_cute, out_cute, Int32(1), Float32(1e-6), stream_fake, options="--enable-tvm-ffi")
-        compiled_rmsnorm(x_cute, w_cute, out_cute, Int32(batch_size), Float32(1e-6))
-
     benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-torch-tensor", torch_rmsnorm, [], 100)
-    benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-cute-tensor", cute_rmsnorm, [], 100)
     benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-torch-tensor", torch_rmsnorm, [], 100)
-    benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-cute-tensor", cute_rmsnorm, [], 100)
 
 def main():
     benchmark_overhead()
