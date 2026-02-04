@@ -198,10 +198,10 @@ def benchmark_e2e():
         compiled_rmsnorm = cute.compile(cute_func, x_cute, w_cute, out_cute, Int32(1), Float32(1e-6), stream_fake, options="--enable-tvm-ffi")
         compiled_rmsnorm(x_cute, w_cute, out_cute, Int32(batch_size), Float32(1e-6))
 
-    benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-torch-tensor", torch_rmsnorm, [])
-    benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-cute-tensor", cute_rmsnorm, [])
-    benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-torch-tensor", torch_rmsnorm, [])
-    benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-cute-tensor", cute_rmsnorm, [])
+    benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-torch-tensor", torch_rmsnorm, [], 100)
+    benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-cute-tensor", cute_rmsnorm, [], 100)
+    benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-torch-tensor", torch_rmsnorm, [], 100)
+    benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-cute-tensor", cute_rmsnorm, [], 100)
 
 def main():
     benchmark_overhead()
