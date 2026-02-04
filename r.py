@@ -35,6 +35,7 @@ import tvm_ffi
 import os
 from pathlib import Path
 import time
+import functools
 
 import cutlass
 from cutlass import Float32, Int32
@@ -56,6 +57,7 @@ from flashinfer.norm.utils import (
 )
 
 
+@functools.cache
 def rmsnorm_gen(
     dtype: cutlass.Numeric,
     H: int,
