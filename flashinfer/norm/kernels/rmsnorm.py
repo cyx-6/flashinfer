@@ -810,13 +810,14 @@ def rmsnorm_cute(
     Last dimension must be contiguous (stride[-1] == 1).
     """
     H = input.shape[-1]
-    return
     if input.dim() == 3:
+        assert False
         M = input.shape[0] * input.shape[1]
         input_2d = input.view(M, H)
         out_2d = out.view(M, H)
     else:
         M = input.shape[0]
+        return
         input_2d = input
         out_2d = out
 
