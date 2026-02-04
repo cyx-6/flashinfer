@@ -196,9 +196,10 @@ def benchmark_overhead():
     x_torch = torch.randn(batch_size, hidden_size, device="cuda", dtype=dtype)
     w_torch = torch.randn(hidden_size, device="cuda", dtype=dtype)
     out_torch = torch.empty_like(x_torch)
+    cutlass_dtype = get_cutlass_dtype(_torch_dtype_to_str(x_torch.dtype))
 
     cute_kernel, cute_func, vec_size = rmsnorm_gen(
-        get_cutlass_dtype(_torch_dtype_to_str(x_torch.dtype)),
+        cutlass_dtype,
         hidden_size
     )
 
@@ -209,11 +210,11 @@ def benchmark_overhead():
 
     # Create fake tensors with symbolic stride for arbitrary stride support
     x_fake = cute.runtime.make_fake_tensor(
-        dtype, (sym_m, hidden_size), (sym_row_stride_x, 1), assumed_align=16
+        cutlass_dtype, (sym_m, hidden_size), (sym_row_stride_x, 1), assumed_align=16
     )
-    w_fake = cute.runtime.make_fake_compact_tensor(dtype, (hidden_size,), assumed_align=16)
+    w_fake = cute.runtime.make_fake_compact_tensor(cutlass_dtype, (hidden_size,), assumed_align=16)
     out_fake = cute.runtime.make_fake_tensor(
-        dtype, (sym_m, hidden_size), (sym_row_stride_y, 1), assumed_align=16
+        cutlass_dtype, (sym_m, hidden_size), (sym_row_stride_y, 1), assumed_align=16
     )
 
     stream_fake = cute.runtime.make_fake_stream(use_tvm_ffi_env_stream=True)
@@ -235,8 +236,10 @@ def benchmark_e2e():
     out_torch = torch.empty_like(x_torch)
 
     def torch_rmsnorm():
+
+        cutlass_dtype = get_cutlass_dtype(_torch_dtype_to_str(x_torch.dtype))
         cute_kernel, cute_func, vec_size = rmsnorm_gen(
-            get_cutlass_dtype(_torch_dtype_to_str(x_torch.dtype)),
+            cutlass_dtype,
             hidden_size
         )
 
@@ -247,11 +250,11 @@ def benchmark_e2e():
 
         # Create fake tensors with symbolic stride for arbitrary stride support
         x_fake = cute.runtime.make_fake_tensor(
-            dtype, (sym_m, hidden_size), (sym_row_stride_x, 1), assumed_align=16
+            cutlass_dtype, (sym_m, hidden_size), (sym_row_stride_x, 1), assumed_align=16
         )
-        w_fake = cute.runtime.make_fake_compact_tensor(dtype, (hidden_size,), assumed_align=16)
+        w_fake = cute.runtime.make_fake_compact_tensor(cutlass_dtype, (hidden_size,), assumed_align=16)
         out_fake = cute.runtime.make_fake_tensor(
-            dtype, (sym_m, hidden_size), (sym_row_stride_y, 1), assumed_align=16
+            cutlass_dtype, (sym_m, hidden_size), (sym_row_stride_y, 1), assumed_align=16
         )
 
         stream_fake = cute.runtime.make_fake_stream(use_tvm_ffi_env_stream=True)
