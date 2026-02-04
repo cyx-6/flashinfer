@@ -820,11 +820,13 @@ def rmsnorm_cute(
 
         dtype_str = _torch_dtype_to_str(input.dtype)
 
-        if cached.get(dtype_str + str(H)) is None:
-            kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
-            cached[dtype_str + str(H)] = kernel
-        else:
-            kernel = cached[dtype_str + str(H)]
+        kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
+
+        # if cached.get(dtype_str + str(H)) is None:
+        #     kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
+        #     cached[dtype_str + str(H)] = kernel
+        # else:
+        #     kernel = cached[dtype_str + str(H)]
         return
         kernel(input, weight, out, M, eps)
         return
