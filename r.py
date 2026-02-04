@@ -97,11 +97,8 @@ def rmsnorm_gen(
         tidx, _, _ = cute.arch.thread_idx()
         bidx, _, _ = cute.arch.block_idx()
 
-        H = self.H
-        weight_bias = self.weight_bias
+        weight_bias = weight_bias
         threads_per_row = tv_layout.shape[0][0]
-        num_warps = self.num_warps
-        copy_bits = self.copy_bits
 
         # Allocate shared memory (only reduction buffer needed)
         smem = cutlass.utils.SmemAllocator()
