@@ -83,7 +83,6 @@ def rmsnorm_gen(
 
     @cute.kernel
     def cute_kernel(
-        self,
         mX: cute.Tensor,
         mW: cute.Tensor,
         mY: cute.Tensor,
