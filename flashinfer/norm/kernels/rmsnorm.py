@@ -827,7 +827,7 @@ def rmsnorm_cute(
     else:
         kernel = cached[dtype_str + str(H)]
 
-    kernel(input_2d, weight, out_2d, M, eps)
+    # kernel(input_2d, weight, out_2d, M, eps)
 
 
 def qk_rmsnorm_cute(
