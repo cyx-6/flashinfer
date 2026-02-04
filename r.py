@@ -97,7 +97,6 @@ def rmsnorm_gen(
         tidx, _, _ = cute.arch.thread_idx()
         bidx, _, _ = cute.arch.block_idx()
 
-        weight_bias = weight_bias
         threads_per_row = tv_layout.shape[0][0]
 
         # Allocate shared memory (only reduction buffer needed)
