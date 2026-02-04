@@ -810,24 +810,25 @@ def rmsnorm_cute(
     Last dimension must be contiguous (stride[-1] == 1).
     """
     H = input.shape[-1]
+    return
     if input.dim() == 3:
         M = input.shape[0] * input.shape[1]
-        # input_2d = input.view(M, H)
-        # out_2d = out.view(M, H)
+        input_2d = input.view(M, H)
+        out_2d = out.view(M, H)
     else:
         M = input.shape[0]
-        # input_2d = input
-        # out_2d = out
+        input_2d = input
+        out_2d = out
 
     dtype_str = _torch_dtype_to_str(input.dtype)
 
-    # if cached.get(dtype_str + str(H)) is None:
-    #     kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
-    #     cached[dtype_str + str(H)] = kernel
-    # else:
-    #     kernel = cached[dtype_str + str(H)]
+    if cached.get(dtype_str + str(H)) is None:
+        kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
+        cached[dtype_str + str(H)] = kernel
+    else:
+        kernel = cached[dtype_str + str(H)]
 
-    # kernel(input_2d, weight, out_2d, M, eps)
+    kernel(input_2d, weight, out_2d, M, eps)
 
 
 def qk_rmsnorm_cute(
