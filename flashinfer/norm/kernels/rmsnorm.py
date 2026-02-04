@@ -827,7 +827,6 @@ def rmsnorm_cute(
         #     cached[dtype_str + str(H)] = kernel
         # else:
         #     kernel = cached[dtype_str + str(H)]
-        return
         kernel(input, weight, out, M, eps)
         return
 
