@@ -608,7 +608,7 @@ class RMSNormQuantKernel:
 # =============================================================================
 
 
-# @functools.cache
+@functools.cache
 def _get_compiled_rmsnorm_kernel(dtype_str: str, H: int, weight_bias: float):
     """Get a compiled RMSNorm kernel using TVM-FFI."""
     dtype = get_cutlass_dtype(dtype_str)
