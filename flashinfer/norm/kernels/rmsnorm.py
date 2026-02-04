@@ -812,12 +812,12 @@ def rmsnorm_cute(
     H = input.shape[-1]
     if input.dim() == 3:
         M = input.shape[0] * input.shape[1]
-        input_2d = input.view(M, H)
-        out_2d = out.view(M, H)
+        # input_2d = input.view(M, H)
+        # out_2d = out.view(M, H)
     else:
         M = input.shape[0]
-        input_2d = input
-        out_2d = out
+        # input_2d = input
+        # out_2d = out
 
     dtype_str = _torch_dtype_to_str(input.dtype)
 
