@@ -817,10 +817,9 @@ def rmsnorm_cute(
         out_2d = out.view(M, H)
     else:
         M = input.shape[0]
-        return
         input_2d = input
         out_2d = out
-
+    return
     dtype_str = _torch_dtype_to_str(input.dtype)
 
     if cached.get(dtype_str + str(H)) is None:
