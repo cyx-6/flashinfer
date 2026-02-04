@@ -168,10 +168,15 @@ def benchmark_e2e():
     hidden_size = 4096
     dtype = torch.bfloat16
 
+    x_torch = torch.randn(batch_size, hidden_size, device="cuda", dtype=dtype)
+    w_torch = torch.randn(hidden_size, device="cuda", dtype=dtype)
+    out_torch = torch.empty_like(x_torch)
+
     def torch_rmsnorm():
-        x_torch = torch.randn(batch_size, hidden_size, device="cuda", dtype=dtype)
-        w_torch = torch.randn(hidden_size, device="cuda", dtype=dtype)
-        out_torch = torch.empty_like(x_torch)
+        x_cute = from_dlpack(x_torch, enable_tvm_ffi=True).mark_layout_dynamic()
+        w_cute = from_dlpack(w_torch, enable_tvm_ffi=True).mark_layout_dynamic()
+        out_cute = from_dlpack(out_torch, enable_tvm_ffi=True).mark_layout_dynamic()
+
         cute_kernel, cute_func = rmsnorm_gen(
             get_cutlass_dtype(_torch_dtype_to_str(x_torch.dtype)),
             hidden_size
@@ -181,10 +186,6 @@ def benchmark_e2e():
         compiled_rmsnorm(x_torch, w_torch, out_torch, Int32(batch_size), Float32(1e-6))
 
     def cute_rmsnorm():
-        x_torch = torch.randn(batch_size, hidden_size, device="cuda", dtype=dtype)
-        w_torch = torch.randn(hidden_size, device="cuda", dtype=dtype)
-        out_torch = torch.empty_like(x_torch)
-
         x_cute = from_dlpack(x_torch, enable_tvm_ffi=True).mark_layout_dynamic()
         w_cute = from_dlpack(w_torch, enable_tvm_ffi=True).mark_layout_dynamic()
         out_cute = from_dlpack(out_torch, enable_tvm_ffi=True).mark_layout_dynamic()
