@@ -42,12 +42,12 @@ void rmsnorm(TensorView output, TensorView input, TensorView weight, double eps,
     const cudaStream_t stream = get_stream(input.device());
     // nvtx3::scoped_range run{"cuda_rmsnorm_run2d"};
     DISPATCH_DLPACK_DTYPE_TO_CTYPE_FP16(input.dtype(), c_type, [&] {
-      cudaError_t status = norm::RMSNorm(
-          static_cast<c_type*>(input.data_ptr()), static_cast<c_type*>(weight.data_ptr()),
-          static_cast<c_type*>(output.data_ptr()), batch_size, hidden_size, input.stride(0),
-          output.stride(0), eps, enable_pdl, stream);
-      TVM_FFI_ICHECK(status == cudaSuccess)
-          << "RMSNorm failed with error code " << cudaGetErrorString(status);
+      // cudaError_t status = norm::RMSNorm(
+      //     static_cast<c_type*>(input.data_ptr()), static_cast<c_type*>(weight.data_ptr()),
+      //     static_cast<c_type*>(output.data_ptr()), batch_size, hidden_size, input.stride(0),
+      //     output.stride(0), eps, enable_pdl, stream);
+      // TVM_FFI_ICHECK(status == cudaSuccess)
+      //     << "RMSNorm failed with error code " << cudaGetErrorString(status);
       return true;
     });
   } else if (input_ndim == 3) {
