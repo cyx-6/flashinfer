@@ -37,7 +37,7 @@ from pathlib import Path
 import time
 
 from cutlass import Float32, Int32
-from ..utils import (
+from flashinfer.norm.utils import (
     FLOAT8_E4M3_MAX,
     COPY_BITS,
     rcp_approx_ftz,
