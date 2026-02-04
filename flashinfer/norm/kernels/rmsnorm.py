@@ -822,8 +822,6 @@ def rmsnorm_cute(
 
     dtype_str = _torch_dtype_to_str(input.dtype)
 
-    return
-
     if cached.get(dtype_str + str(H)) is None:
         kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias)
         cached[dtype_str + str(H)] = kernel
