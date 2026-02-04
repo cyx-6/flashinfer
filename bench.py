@@ -75,8 +75,7 @@ def main():
                 return gen_norm_module().build_and_load()
 
             cuda_time = bench_kernel(
-                # lambda: get_norm_module().rmsnorm(out, x, w, 1e-6, False)
-                lambda: None
+                lambda: get_norm_module().rmsnorm(out, x, w, 1e-6, False)
             )
 
             speedup = cuda_time / cute_time

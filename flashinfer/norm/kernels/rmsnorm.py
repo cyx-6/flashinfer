@@ -809,8 +809,8 @@ def rmsnorm_cute(
     Supports arbitrary stride - no need to call contiguous().
     Last dimension must be contiguous (stride[-1] == 1).
     """
-    return
     H = input.shape[-1]
+    return
     if input.dim() == 3:
         M = input.shape[0] * input.shape[1]
         input_2d = input.view(M, H)
