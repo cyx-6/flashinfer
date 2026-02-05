@@ -26,6 +26,7 @@
 #include "math.cuh"
 #include "utils.cuh"
 #include "vec_dtypes.cuh"
+#include "nvtx3/nvtx3.hpp"
 
 namespace flashinfer {
 
@@ -139,8 +140,12 @@ cudaError_t RMSNorm(T* input, T* weight, T* output, uint32_t batch_size, uint32_
     auto kernel = RMSNormKernel<VEC_SIZE, T>;
     FLASHINFER_CUDA_CALL(
         cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, smem_size));
+    nvtx3::event_attributes attr1{"cuda rmsnorm kernel in", nvtx3::rgb{255,0,0}};
+    nvtx3::mark(attr1);
     FLASHINFER_CUDA_CALL(cudaLaunchKernelEx(&config, kernel, input, weight, output, d, stride_input,
                                             stride_output, weight_bias, eps));
+    nvtx3::event_attributes attr2{"cuda rmsnorm kernel out", nvtx3::rgb{255,0,0}};
+    nvtx3::mark(attr2);
   });
   return cudaSuccess;
 }

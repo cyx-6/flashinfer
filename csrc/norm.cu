@@ -21,6 +21,7 @@
 using namespace flashinfer;
 
 void rmsnorm(TensorView output, TensorView input, TensorView weight, double eps, bool enable_pdl) {
+  nvtx3::mark("cuda rmsnorm c++ in");
   // nvtx3::scoped_range all{"cuda_rmsnorm_all"};
   CHECK_LAST_DIM_CONTIGUOUS_INPUT(input);
   CHECK_LAST_DIM_CONTIGUOUS_INPUT(output);
@@ -78,6 +79,8 @@ void rmsnorm(TensorView output, TensorView input, TensorView weight, double eps,
   } else {
     TVM_FFI_ICHECK(false) << "Unsupported input dimension: " << input_ndim;
   }
+
+  nvtx3::mark("cuda rmsnorm c++ out");
 }
 
 void rmsnorm_quant(TensorView output, TensorView input, TensorView weight, double scale, double eps,

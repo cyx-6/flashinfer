@@ -7,50 +7,63 @@ import functools
 import cutlass
 from cutlass import Float32, Int32
 import nvtx
+import math
 
 
-from flashinfer.norm.utils import (
-    FLOAT8_E4M3_MAX,
-    COPY_BITS,
-    rcp_approx_ftz,
-    cvt_and_store_f32_to_e4m3,
-    get_ptr_as_int64,
-    warp_reduce,
-    row_reduce_sum,
-    predicate_k,
-    compute_optimal_vec_size,
-    compute_threads_per_row,
-    make_tv_layout,
-    _torch_dtype_to_str,
-    get_cutlass_dtype,
-    get_num_sm,
-)
+COPY_BITS = 128
 
 
-@functools.cache
-def rmsnorm_gen(
-    dtype: cutlass.Numeric,
-    H: int,
-    weight_bias: float = 0.0
-):
-    # Vectorization parameters: use optimal vec_size for warp utilization
-    elem_bits = dtype.width
-    max_vec_size = COPY_BITS // elem_bits  # 8 for float16/bfloat16, 4 for float32
-    vec_size = compute_optimal_vec_size(H, max_vec_size)
+def get_cutlass_dtype(dtype: str) -> cutlass.dtype:
+    dtype_map = {
+        "float16": cutlass.Float16,
+        "bfloat16": cutlass.BFloat16,
+        "float32": cutlass.Float32,
+        "float8_e5m2": cutlass.Float8E5M2,
+        "float8_e4m3fn": cutlass.Float8E4M3FN,
+        "float8_e8m0fnu": cutlass.Float8E8M0FNU,
+        "float4_e2m1fn": cutlass.Float4E2M1FN,
+    }
+    return dtype_map[dtype]
+
+def _torch_dtype_to_str(dtype: torch.dtype) -> str:
+    dtype_map = {
+        torch.float16: "float16",
+        torch.bfloat16: "bfloat16",
+        torch.float32: "float32",
+        torch.float8_e4m3fn: "float8_e4m3fn",
+    }
+    return dtype_map[dtype]
 
 
-    @cute.jit
-    def cute_func(
-        mX: cute.Tensor,
-        mW: cute.Tensor,
-        mY: cute.Tensor,
-        M: Int32,
-        eps: Float32,
-        stream,
-    ):
-        """Launch the RMSNorm kernel."""
+def compute_optimal_vec_size(H: int, max_vec_size: int) -> int:
+    """Compute vec_size that maximizes warp utilization.
 
-    return cute_func, vec_size
+    For small hidden sizes, using max vec_size may result in fewer than 32 threads,
+    wasting warp resources. This function finds the largest vec_size that:
+    1. Divides H evenly
+    2. Results in at least 32 threads (one full warp)
+
+    Examples:
+    - H=128, max=8: vec_size=8 gives 16 threads, vec_size=4 gives 32 threads -> return 4
+    - H=4096, max=8: vec_size=8 gives 512 threads -> return 8
+    - H=111, max=8: no vec_size divides evenly with >=32 threads, use gcd -> return 1
+    """
+    # Try vec_sizes from largest to smallest
+    for vec_size in [
+        max_vec_size,
+        max_vec_size // 2,
+        max_vec_size // 4,
+        max_vec_size // 8,
+    ]:
+        if vec_size < 1:
+            continue
+        if H % vec_size != 0:
+            continue
+        threads_needed = H // vec_size
+        if threads_needed >= 32:
+            return vec_size
+    # Fallback: use gcd for correctness (handles odd sizes like 111)
+    return math.gcd(max_vec_size, H)
 
 
 def print_speed(name: str, speed: float) -> None:
@@ -61,7 +74,7 @@ def benchmark_call(name, func, args, num_calls=10000):
     torch.cuda.synchronize()
     start_time = time.time()
     for _ in range(num_calls):
-        with nvtx.annotate("rmsnorm"):
+        # with nvtx.annotate("rmsnorm"):
             func(*args)
     torch.cuda.synchronize()
     end_time = time.time()
@@ -86,31 +99,11 @@ class RMSNormKernel:
         H: int,
         weight_bias: float = 0.0,
     ):
-        self.dtype = dtype
-        self.H = H
-        self.weight_bias = weight_bias
-
         # Vectorization parameters: use optimal vec_size for warp utilization
         elem_bits = dtype.width
         max_vec_size = COPY_BITS // elem_bits  # 8 for float16/bfloat16, 4 for float32
         self.vec_size = compute_optimal_vec_size(H, max_vec_size)
-        self.copy_bits = self.vec_size * elem_bits  # Actual bits per copy
 
-        # Thread configuration
-        self.threads_per_row = compute_threads_per_row(H, self.vec_size)
-        self.num_threads = self.threads_per_row  # One row per block
-        self.num_warps = max(self.threads_per_row // 32, 1)
-
-        # Vectorization blocks
-        self.num_vec_blocks = max(
-            1, (H // self.vec_size + self.threads_per_row - 1) // self.threads_per_row
-        )
-        self.cols_per_tile = self.vec_size * self.num_vec_blocks * self.threads_per_row
-
-    def _smem_size_in_bytes(self) -> int:
-        """Calculate shared memory requirement."""
-        # Only reduction buffer needed (no shared memory for input/weight)
-        return self.num_warps * 4
 
     @cute.jit
     def __call__(

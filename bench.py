@@ -13,17 +13,17 @@ from flashinfer.testing.utils import bench_gpu_time, bench_e2e_time
 def bench_kernel(fn, warmup=10, iters=100):
     return (
         np.median(
-            bench_gpu_time(
-                lambda: fn(),
-                enable_cupti=True,
-                dry_run_iters=10,
-                repeat_iters=100,
-            )
-            # bench_e2e_time(
+            # bench_gpu_time(
             #     lambda: fn(),
+            #     enable_cupti=True,
             #     dry_run_iters=10,
             #     repeat_iters=100,
             # )
+            bench_e2e_time(
+                lambda: fn(),
+                dry_run_iters=10,
+                repeat_iters=100,
+            )
         )
         * 1000
     )

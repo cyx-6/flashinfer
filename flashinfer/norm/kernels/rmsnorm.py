@@ -27,6 +27,7 @@ import operator
 
 import cutlass
 import cutlass.cute as cute
+import nvtx
 import torch
 from cutlass import Float32, Int32
 
@@ -668,6 +669,8 @@ def _get_compiled_rmsnorm_kernel(
         stream_fake,
         options="--enable-tvm-ffi",
     )
+    compiled_kernel.export_to_c("/root/flashinfer/build/cute.ll", "cute_func")
+
 
     def tensor_api(
         input: torch.Tensor,
@@ -846,7 +849,9 @@ def rmsnorm_cute(
 
     dtype_str = _torch_dtype_to_str(input.dtype)
     kernel = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias, enable_pdl)
+    nvtx.mark("cute rmsnorm in", color="red")
     kernel(input_2d, weight, out_2d, M, eps)
+    nvtx.mark("cute rmsnorm out", color="red")
 
 
 def qk_rmsnorm_cute(
