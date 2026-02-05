@@ -669,25 +669,8 @@ def _get_compiled_rmsnorm_kernel(
         stream_fake,
         options="--enable-tvm-ffi",
     )
-    compiled_kernel.export_to_c("/root/flashinfer/build/cute.ll", "cute_func")
 
-
-    def tensor_api(
-        input: torch.Tensor,
-        weight: torch.Tensor,
-        out: torch.Tensor,
-        M: int,
-        eps: float,
-    ) -> None:
-        compiled_kernel(
-            input,
-            weight,
-            out,
-            Int32(M),
-            Float32(eps),
-        )
-
-    return tensor_api
+    return compiled_kernel
 
 
 @functools.cache

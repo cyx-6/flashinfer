@@ -158,22 +158,7 @@ def _get_compiled_rmsnorm_kernel(
         options="--enable-tvm-ffi",
     )
 
-    def tensor_api(
-        input: torch.Tensor,
-        weight: torch.Tensor,
-        out: torch.Tensor,
-        M: int,
-        eps: float,
-    ) -> None:
-        compiled_kernel(
-            input,
-            weight,
-            out,
-            Int32(M),
-            Float32(eps),
-        )
-
-    return tensor_api
+    return compiled_kernel
 
 
 def benchmark_overhead():
@@ -189,7 +174,7 @@ def benchmark_overhead():
     dtype_str = _torch_dtype_to_str(x_torch.dtype)
     kernel = _get_compiled_rmsnorm_kernel(dtype_str, hidden_size, 0.0, False)
 
-    torch_args = [x_torch, w_torch, out_torch, Int32(batch_size), Float32(1e-6)]
+    torch_args = [x_torch, w_torch, out_torch, batch_size, 1e-6]
     benchmark_call(f"[RMSNORM][JIT][TVM-FFI] call-with-torch-tensor", kernel, torch_args)
 
 
