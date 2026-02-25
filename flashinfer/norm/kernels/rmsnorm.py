@@ -43,6 +43,7 @@ from ..utils import (
     compute_threads_per_row,
     make_tv_layout,
     _torch_dtype_to_str,
+    _dtype_code_to_str,
     get_cutlass_dtype,
     get_num_sm,
 )
@@ -766,6 +767,35 @@ def _get_compiled_rmsnorm_quant_kernel(
 
 
 # =============================================================================
+# CuTe DSL C++ Cache Module
+# =============================================================================
+
+
+@functools.cache
+def _get_cute_dsl_cache_module():
+    """Get the C++ kernel cache module with compile callback registered.
+
+    This module provides C++ caching for CuTe DSL kernels to reduce
+    Python-side overhead from shape extraction, dtype conversion, and
+    functools.cache lookups.
+    """
+    from flashinfer.jit.cute_dsl_cache import gen_cute_dsl_cache_module
+
+    mod = gen_cute_dsl_cache_module().build_and_load()
+
+    # Register compile callback that triggers CuTe kernel compilation on cache miss
+    def compile_kernel_from_cpp(
+        dtype_code: int, H: int, weight_bias: float, enable_pdl: bool
+    ):
+        dtype_str = _dtype_code_to_str(dtype_code)
+        compiled = _get_compiled_rmsnorm_kernel(dtype_str, H, weight_bias, enable_pdl)
+        return compiled
+
+    mod.flashinfer_set_rmsnorm_compile_callback(compile_kernel_from_cpp)
+    return mod
+
+
+# =============================================================================
 # CuTe DSL API Functions
 # =============================================================================
 
@@ -778,28 +808,15 @@ def rmsnorm_cute(
     weight_bias: float = 0.0,
     enable_pdl: bool = False,
 ) -> None:
-    """CuTe DSL RMSNorm implementation.
+    """CuTe DSL RMSNorm with C++ kernel caching.
+
+    This version minimizes Python overhead by caching compiled kernels in C++.
 
     Supports arbitrary stride - no need to call contiguous().
     Last dimension must be contiguous (stride[-1] == 1).
     """
-
-    shape = input.shape
-    H = shape[-1]
-
-    if len(shape) == 3:
-        M = shape[0] * shape[1]
-        input_2d = input.view(M, H)
-        out_2d = out.view(M, H)
-    else:
-        M = shape[0]
-        input_2d = input
-        out_2d = out
-
-    kernel = _get_compiled_rmsnorm_kernel(
-        _torch_dtype_to_str(input.dtype), H, weight_bias, enable_pdl
-    )
-    kernel(input_2d, weight, out_2d, M, eps)
+    mod = _get_cute_dsl_cache_module()
+    mod.flashinfer_rmsnorm_cute_cached(input, weight, out, eps, weight_bias, enable_pdl)
 
 
 def qk_rmsnorm_cute(

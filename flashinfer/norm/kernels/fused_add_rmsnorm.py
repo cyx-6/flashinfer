@@ -40,6 +40,7 @@ from ..utils import (
     compute_threads_per_row,
     make_tv_layout,
     _torch_dtype_to_str,
+    _dtype_code_to_str,
     get_cutlass_dtype,
 )
 
@@ -508,6 +509,31 @@ def _get_compiled_fused_add_rmsnorm_quant_kernel(
 
 
 # =============================================================================
+# CuTe DSL C++ Cache Module
+# =============================================================================
+
+
+@functools.cache
+def _get_fused_add_rmsnorm_cute_dsl_cache_module():
+    """Get the C++ kernel cache module with FusedAddRMSNorm compile callback registered."""
+    from flashinfer.jit.cute_dsl_cache import gen_cute_dsl_cache_module
+
+    mod = gen_cute_dsl_cache_module().build_and_load()
+
+    def compile_kernel_from_cpp(
+        dtype_code: int, H: int, weight_bias: float, enable_pdl: bool
+    ):
+        dtype_str = _dtype_code_to_str(dtype_code)
+        compiled = _get_compiled_fused_add_rmsnorm_kernel(
+            dtype_str, H, weight_bias, enable_pdl
+        )
+        return compiled
+
+    mod.flashinfer_set_fused_add_rmsnorm_compile_callback(compile_kernel_from_cpp)
+    return mod
+
+
+# =============================================================================
 # CuTe DSL API Functions
 # =============================================================================
 
@@ -520,21 +546,17 @@ def fused_add_rmsnorm_cute(
     weight_bias: float = 0.0,
     enable_pdl: bool = False,
 ) -> None:
-    """CuTe DSL Fused Add + RMSNorm implementation.
+    """CuTe DSL Fused Add + RMSNorm with C++ kernel caching.
+
+    This version minimizes Python overhead by caching compiled kernels in C++.
 
     Supports arbitrary stride - no need to call contiguous().
     Last dimension must be contiguous (stride[-1] == 1).
     """
-
-    shape = input.shape
-    H = shape[-1]
-    M = shape[0]
-
-    dtype_str = _torch_dtype_to_str(input.dtype)
-    kernel = _get_compiled_fused_add_rmsnorm_kernel(
-        dtype_str, H, weight_bias, enable_pdl
+    mod = _get_fused_add_rmsnorm_cute_dsl_cache_module()
+    mod.flashinfer_fused_add_rmsnorm_cute_cached(
+        input, residual, weight, eps, weight_bias, enable_pdl
     )
-    kernel(input, residual, weight, M, eps)
 
 
 def fused_add_rmsnorm_quant_cute(

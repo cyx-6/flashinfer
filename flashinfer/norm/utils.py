@@ -308,6 +308,33 @@ def _torch_dtype_to_str(dtype: torch.dtype) -> str:
     return _TORCH_DTYPE_TO_STR_MAP[dtype]
 
 
+def _encode_dlpack_dtype(code: int, bits: int, lanes: int = 1) -> int:
+    """Encode DLPack dtype to int64 code (matches C++ encode_dlpack_dtype)."""
+    return (code << 16) | (bits << 8) | lanes
+
+
+# DLPack type codes (from dlpack.h)
+_kDLFloat = 2
+_kDLBfloat = 4
+_kDLFloat8_e4m3fn = 11
+
+# Precomputed dtype codes matching C++ tvm_ffi_utils.h constants
+_DTYPE_CODE_TO_STR_MAP = {
+    _encode_dlpack_dtype(_kDLFloat, 16): "float16",
+    _encode_dlpack_dtype(_kDLBfloat, 16): "bfloat16",
+    _encode_dlpack_dtype(_kDLFloat, 32): "float32",
+    _encode_dlpack_dtype(_kDLFloat8_e4m3fn, 8): "float8_e4m3fn",
+}
+
+
+def _dtype_code_to_str(dtype_code: int) -> str:
+    """Convert dtype code (from C++ encode_dlpack_dtype) to string.
+
+    Used by C++ callback to convert dtype codes back to strings for kernel compilation.
+    """
+    return _DTYPE_CODE_TO_STR_MAP[dtype_code]
+
+
 # Re-export utilities from cute_dsl.utils for convenience
 __all__ = [
     # Constants
@@ -330,6 +357,7 @@ __all__ = [
     "make_tv_layout",
     # Type utilities
     "_torch_dtype_to_str",
+    "_dtype_code_to_str",
     # Re-exports from cute_dsl.utils
     "get_cutlass_dtype",
     "get_num_sm",
