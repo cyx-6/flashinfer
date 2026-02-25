@@ -1505,6 +1505,107 @@ def bench_gpu_time_with_cudagraph(
     return measured_times
 
 
+def bench_e2e_time(
+    fn,
+    dry_run_iters: int = None,
+    repeat_iters: int = None,
+    dry_run_time_ms: int = 25,
+    repeat_time_ms: int = 100,
+    l2_flush: Optional[bool] = None,  # Deprecated. Use cold_l2_cache instead
+    l2_flush_size_mb: Optional[int] = None,  # Deprecated. Use cold_l2_cache instead
+    l2_flush_device: Optional[str] = None,  # Deprecated. Use cold_l2_cache instead
+    sleep_after_run: bool = False,
+    input_args: Tuple = (),
+    input_kwargs: Optional[dict] = None,
+    cold_l2_cache: bool = True,
+):
+    if input_kwargs is None:
+        input_kwargs = {}
+
+    # Handle deprecated parameters
+    if any(p is not None for p in [l2_flush, l2_flush_size_mb, l2_flush_device]):
+        warnings.warn(
+            "l2_flush, l2_flush_size_mb, and l2_flush_device are deprecated. "
+            "Use cold_l2_cache instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        _do_l2_flush = l2_flush if l2_flush is not None else True
+        _l2_flush_size_mb = l2_flush_size_mb if l2_flush_size_mb is not None else 256
+        _l2_flush_device = l2_flush_device if l2_flush_device is not None else "cuda"
+    else:
+        _do_l2_flush = cold_l2_cache
+        # Dynamically determine L2 flush size and device
+        _l2_flush_device = _infer_device_from_tensors(input_args, input_kwargs, "cuda")
+        l2_size = get_l2_cache_size(_l2_flush_device)
+        # Use 2x L2 size to ensure complete flush
+        _l2_flush_size_mb = (l2_size * 2) // (1024 * 1024)
+
+    # Check if args are provided (determines how we call fn)
+    has_args = bool(input_args) or bool(input_kwargs)
+
+    def call_fn():
+        if has_args:
+            fn(*input_args, **input_kwargs)
+        else:
+            fn()
+
+    buffer = None
+    if _do_l2_flush:
+        l2_flush_size = int(_l2_flush_size_mb) * 1024 * 1024
+        buffer = torch.empty(l2_flush_size, device=_l2_flush_device, dtype=torch.int8)
+
+    ## Estimate kernel execution time by running the kernel 5 times
+    measurement_iters = 5
+    torch.cuda.synchronize()
+    call_fn()  # Call once to exclude initial overhead
+    torch.cuda.synchronize()
+    start_time = time.time_ns()
+    for _ in range(measurement_iters):
+        if _do_l2_flush:
+            buffer.zero_()
+        call_fn()
+    end_time = time.time_ns()
+    torch.cuda.synchronize()
+    estimated_kernel_execution_time = (end_time - start_time) / measurement_iters / 1e3  # Convert to us
+
+    ## Set dry run and repeat iterations
+    if dry_run_iters is None:
+        dry_run_iters = max(1, int(dry_run_time_ms / estimated_kernel_execution_time))
+    if repeat_iters is None:
+        repeat_iters = max(1, int(repeat_time_ms / estimated_kernel_execution_time))
+
+    # Dry runs
+    torch.cuda.synchronize()
+    for _ in range(dry_run_iters):
+        if _do_l2_flush:
+            buffer.zero_()
+        call_fn()
+    torch.cuda.synchronize()
+
+    # Actual run
+    start_times = []
+    end_times = []
+    torch.cuda.synchronize()
+    for iter_idx in range(repeat_iters):
+        if _do_l2_flush:
+            buffer.zero_()
+        start_time = time.time_ns()
+        call_fn()
+        end_time = time.time_ns()
+        start_times.append(start_time)
+        end_times.append(end_time)
+
+        if sleep_after_run:
+            sleep_after_kernel_run(estimated_kernel_execution_time)
+
+    # Synchronize once outside of the loop to avoid synchronization overhead
+    torch.cuda.synchronize()
+    measured_times = []
+    for iter_idx in range(repeat_iters):
+        measured_times.append((end_times[iter_idx] - start_times[iter_idx]) / 1e6)  # Convert to us
+    return measured_times
+
 def bench_gpu_time(
     fn,
     dry_run_iters: int = None,
